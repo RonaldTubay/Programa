@@ -1,0 +1,6 @@
+flask
+pandas
+pyodbc
+openpyxl
+xlrd
+lxml

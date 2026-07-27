@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Gestión Académica{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block titulo_pagina %}Dashboard{% endblock %}
+
+{% block topbar_centro %}
+  <form class="buscador" method="GET" action="/dashboard">
+    {% for k, v in filtros.items() if k != 'buscar' and v %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+    <span>🔍</span>
+    <input type="text" name="buscar" placeholder="Buscar asignatura, carrera, docente o plan..." value="{{ filtros.buscar or '' }}">
+  </form>
+{% endblock %}
+
+{% block content %}
+  <div class="resumen-encabezado">
+    <div>
+      <h2>{{ 'Dashboard de Sílabos' if filtros.modo == 'silabos' else ('Dashboard de Asignaturas' if filtros.modo == 'asignaturas' else 'Dashboard General') }}</h2>
+      <p>{{ filtros.periodo or 'Todos los períodos' }} · {{ 'Unidad seleccionada' if filtros.unidad_id else 'Todas las unidades académicas' }}</p>
+    </div>
+    <span class="pastilla-actualizado">Actualizado: {{ cargas[0].fecha_carga.strftime('%d/%m/%Y') if cargas else 'Sin cargas' }}</span>
+  </div>
+
+  <div class="selector-dashboard">
+    <a href="/dashboard?modo=general" class="{{ 'activo' if filtros.modo == 'general' else '' }}">General</a>
+    <a href="/dashboard?modo=silabos" class="{{ 'activo' if filtros.modo == 'silabos' else '' }}">Sílabos</a>
+    <a href="/dashboard?modo=asignaturas" class="{{ 'activo' if filtros.modo == 'asignaturas' else '' }}">Asignaturas</a>
+  </div>
+
+  <details class="filtros" open>
+    <summary>Filtros de búsqueda</summary>
+    <form class="filtros" method="GET" action="/dashboard">
+      <input type="hidden" name="modo" value="{{ filtros.modo }}">
+      <div>
+        <label>Período</label>
+        <select name="periodo">
+          <option value="">Todos</option>
+          {% for p in periodos %}
+          <option value="{{ p }}" {{ 'selected' if p == filtros.periodo else '' }}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Tipo de unidad</label>
+        <select name="tipo_unidad">
+          <option value="" {{ 'selected' if filtros.tipo_unidad == '' else '' }}>Todas</option>
+          <option value="FACULTAD" {{ 'selected' if filtros.tipo_unidad == 'FACULTAD' else '' }}>Facultades</option>
+          <option value="SEDE_EXTENSION" {{ 'selected' if filtros.tipo_unidad == 'SEDE_EXTENSION' else '' }}>Sedes / extensiones</option>
+          <option value="CAMPUS" {{ 'selected' if filtros.tipo_unidad == 'CAMPUS' else '' }}>Campus</option>
+        </select>
+      </div>
+      <div>
+        <label>Unidad académica</label>
+        <select name="unidad_id">
+          <option value="">Todas</option>
+          {% for u in unidades %}
+          <option value="{{ u.unidad_academica_id }}" {{ 'selected' if u.unidad_academica_id|string == filtros.unidad_id else '' }}>{{ u.nombre }} ({{ u.tipo }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Carrera / malla</label>
+        <select name="carrera_id">
+          <option value="">Todas</option>
+          {% for c in carreras %}
+          <option value="{{ c.carrera_id }}" {{ 'selected' if c.carrera_id|string == filtros.carrera_id else '' }}>{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Estado</label>
+        <select name="estado">
+          <option value="" {{ 'selected' if filtros.estado == '' else '' }}>Todos</option>
+          {% if filtros.modo != 'asignaturas' %}
+          <option value="con_silabo" {{ 'selected' if filtros.estado == 'con_silabo' else '' }}>Con sílabo</option>
+          <option value="sin_silabo" {{ 'selected' if filtros.estado == 'sin_silabo' else '' }}>Sin sílabo</option>
+          <option value="finalizado" {{ 'selected' if filtros.estado == 'finalizado' else '' }}>Sílabo finalizado</option>
+          <option value="por_finalizar" {{ 'selected' if filtros.estado == 'por_finalizar' else '' }}>Sílabo por finalizar</option>
+          <option value="sin_profesor" {{ 'selected' if filtros.estado == 'sin_profesor' else '' }}>Sin profesor de sílabo</option>
+          {% endif %}
+          {% if filtros.modo != 'silabos' %}
+          <option value="con_plan" {{ 'selected' if filtros.estado == 'con_plan' else '' }}>Con plan analítico</option>
+          <option value="sin_plan" {{ 'selected' if filtros.estado == 'sin_plan' else '' }}>Sin plan analítico</option>
+          <option value="ofertada" {{ 'selected' if filtros.estado == 'ofertada' else '' }}>Asignatura ofertada</option>
+          <option value="no_ofertada" {{ 'selected' if filtros.estado == 'no_ofertada' else '' }}>Asignatura no ofertada</option>
+          {% endif %}
+        </select>
+      </div>
+      <div>
+        <button type="submit">Filtrar</button>
+        <a class="limpiar" href="/dashboard?modo={{ filtros.modo }}">Limpiar</a>
+      </div>
+    </form>
+  </details>
+
+  <div class="kpis">
+    {% if filtros.modo == 'asignaturas' %}
+    <div class="kpi" style="--kpi-color:#4c6ef5">
+      <div class="kpi-cabecera"><div class="kpi-icono">📋</div><span class="kpi-badge">{{ kpi.porcentaje_plan }}%</span></div>
+      <p class="valor">{{ kpi.con_plan }} / {{ kpi.total_asignaturas }}</p>
+      <p class="etiqueta">Asignaturas con plan</p>
+      <p class="subetiqueta">{{ kpi.sin_plan }} pendientes</p>
+      <div class="barra"><span style="width:{{ kpi.porcentaje_plan }}%"></span></div>
+    </div>
+    <div class="kpi" style="--kpi-color:#ef4444">
+      <div class="kpi-cabecera"><div class="kpi-icono">!</div><span class="kpi-badge">{{ kpi.sin_plan }}</span></div>
+      <p class="valor">{{ kpi.sin_plan }}</p>
+      <p class="etiqueta">Sin plan analítico</p>
+      <p class="subetiqueta">Requieren revisión</p>
+      <div class="barra"><span style="width:{{ (kpi.sin_plan / kpi.total_asignaturas * 100) | round | int if kpi.total_asignaturas else 0 }}%"></span></div>
+    </div>
+    <div class="kpi" style="--kpi-color:#8b5cf6">
+      <div class="kpi-cabecera"><div class="kpi-icono">🏫</div><span class="kpi-badge">{{ kpi.total_carreras }}</span></div>
+      <p class="valor">{{ kpi.total_carreras }}</p>
+      <p class="etiqueta">Carreras / mallas</p>
+      <p class="subetiqueta">Con asignaturas cargadas</p>
+      <div class="barra"><span style="width:100%"></span></div>
+    </div>
+    <div class="kpi" style="--kpi-color:#22c55e">
+      <div class="kpi-cabecera"><div class="kpi-icono">✓</div><span class="kpi-badge">{{ kpi.total_asignaturas }}</span></div>
+      <p class="valor">{{ kpi.total_asignaturas }}</p>
+      <p class="etiqueta">Asignaturas</p>
+      <p class="subetiqueta">Total según filtros</p>
+      <div class="barra"><span style="width:100%"></span></div>
+    </div>
+    {% else %}
+    <div class="kpi" style="--kpi-color:#f5a524">
+      <div class="kpi-cabecera">
+        <div class="kpi-icono">📘</div>
+        <span class="kpi-badge">{{ kpi.porcentaje }}%</span>
+      </div>
+      <p class="valor">{{ kpi.con_silabo }} / {{ kpi.total }}</p>
+      <p class="etiqueta">Sílabos registrados</p>
+      <p class="subetiqueta">{{ kpi.sin_silabo }} ofertas sin sílabo</p>
+      <div class="barra"><span style="width:{{ kpi.porcentaje }}%"></span></div>
+    </div>
+
+    <div class="kpi" style="--kpi-color:#22c55e">
+      <div class="kpi-cabecera">
+        <div class="kpi-icono">✓</div>
+        <span class="kpi-badge">{{ (kpi.finalizados / kpi.total * 100) | round | int if kpi.total else 0 }}%</span>
+      </div>
+      <p class="valor">{{ kpi.finalizados }} / {{ kpi.total }}</p>
+      <p class="etiqueta">Sílabos finalizados</p>
+      <p class="subetiqueta">Sobre las ofertas cargadas</p>
+      <div class="barra"><span style="width:{{ (kpi.finalizados / kpi.total * 100) | round | int if kpi.total else 0 }}%"></span></div>
+    </div>
+
+    <div class="kpi" style="--kpi-color:#4c6ef5">
+      <div class="kpi-cabecera">
+        <div class="kpi-icono">📋</div>
+        <span class="kpi-badge">{{ kpi.porcentaje_plan }}%</span>
+      </div>
+      <p class="valor">{{ kpi.con_plan }} / {{ kpi.total_asignaturas }}</p>
+      <p class="etiqueta">Asignaturas con plan</p>
+      <p class="subetiqueta">{{ kpi.sin_plan }} asignaturas pendientes</p>
+      <div class="barra"><span style="width:{{ kpi.porcentaje_plan }}%"></span></div>
+    </div>
+
+    <div class="kpi" style="--kpi-color:#8b5cf6">
+      <div class="kpi-cabecera">
+        <div class="kpi-icono">🏫</div>
+        <span class="kpi-badge">{{ kpi.total_carreras }}</span>
+      </div>
+      <p class="valor">{{ kpi.total_carreras }}</p>
+      <p class="etiqueta">Carreras / mallas</p>
+      <p class="subetiqueta">{{ unidades|length }} unidades académicas</p>
+      <div class="barra"><span style="width:100%"></span></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="fila-principal" style="margin-bottom:18px;">
+    <div class="tarjeta">
+      <h3>Avance comparativo</h3>
+      <p class="desc">{{ 'Planes analíticos por grupo' if filtros.modo == 'asignaturas' else ('Sílabos por grupo' if filtros.modo == 'silabos' else 'Sílabos por oferta académica y planes por asignatura') }}</p>
+      <canvas id="graficoAvance" height="92"></canvas>
+    </div>
+
+    <div class="tarjeta" style="overflow-y:auto; max-height:380px;">
+      <h3>Estado por carrera / malla</h3>
+      <p class="desc">Avance de sílabos y asignaturas por grupo</p>
+      {% for g in detalle_grupo %}
+      <div class="estado-carrera-item">
+        <div class="estado-carrera-cabecera">
+          <span class="nombre">{{ g.nombre }}</span>
+          {% set pct_principal = g.porcentaje if filtros.modo == 'silabos' else g.porcentaje_plan %}
+          <span class="pct {{ 'pct-alto' if pct_principal >= 80 else ('pct-medio' if pct_principal >= 50 else 'pct-bajo') }}">{{ pct_principal }}%</span>
+        </div>
+        <div class="sub">{{ g.total }} ofertas · {{ g.total_asignaturas }} asignaturas · {{ g.porcentaje }}% sílabos · {{ g.porcentaje_plan }}% planes</div>
+        <div class="barra-fina doble">
+          <span style="width:{{ g.porcentaje }}%; background:#f5a524"></span>
+          <span style="width:{{ g.porcentaje_plan }}%; background:#4c6ef5"></span>
+        </div>
+      </div>
+      {% else %}
+      <p class="vacio">No hay datos para los filtros seleccionados.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="fila-listas" style="margin-bottom:18px;">
+    {% if filtros.modo != 'asignaturas' %}
+    <div class="lista-tarjeta roja">
+      <h4>Sílabos pendientes</h4>
+      {% if listas.pendientes %}
+      <ul>{% for item in listas.pendientes %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% else %}<p class="vacio">Sin pendientes</p>{% endif %}
+    </div>
+    <div class="lista-tarjeta amarilla">
+      <h4>Sílabos por finalizar</h4>
+      {% if listas.por_finalizar %}
+      <ul>{% for item in listas.por_finalizar %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% else %}<p class="vacio">Nada por finalizar</p>{% endif %}
+    </div>
+    {% endif %}
+    {% if filtros.modo != 'silabos' %}
+    <div class="lista-tarjeta roja">
+      <h4>Asignaturas sin plan</h4>
+      {% if listas.sin_plan %}
+      <ul>{% for item in listas.sin_plan %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% else %}<p class="vacio">Todas con plan</p>{% endif %}
+    </div>
+    {% endif %}
+    {% if filtros.modo != 'asignaturas' %}
+    <div class="lista-tarjeta verde">
+      <h4>Sílabos finalizados</h4>
+      {% if listas.finalizados %}
+      <ul>{% for item in listas.finalizados %}<li>{{ item }}</li>{% endfor %}</ul>
+      {% else %}<p class="vacio">Aún ninguno finalizado</p>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="tarjeta">
+    <h3>Detalle académico ({{ total_filas }} registros)</h3>
+    <p class="desc">Listado cruzado de sílabos y asignaturas según los filtros aplicados</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Unidad</th><th>Carrera / malla</th><th>Nivel</th><th>Código</th><th>Asignatura</th>
+          <th>Régimen</th>
+          {% if filtros.modo != 'asignaturas' %}<th>Paralelo</th><th>Prof. Curso</th><th>Prof. Sílabo</th><th>Sílabo</th><th>Finalizado</th>{% endif %}
+          {% if filtros.modo != 'silabos' %}<th>Plan</th><th>Ref. Plan</th>{% endif %}
+          <th>Período</th>
+        </tr>
+        {% for f in filas %}
+        <tr>
+          <td>{{ f.unidad }}</td>
+          <td>{{ f.carrera }}</td>
+          <td>{{ f.nivel or '-' }}</td>
+          <td>{{ f.cod_materia }}</td>
+          <td>{{ f.materia }}</td>
+          <td>{{ f.regimen_materia or '-' }}</td>
+          {% if filtros.modo != 'asignaturas' %}
+          <td>{{ f.paralelo or '-' }}</td>
+          <td>{{ f.profesor_curso or 'Sin asignar' }}</td>
+          <td>{{ f.profesor_silabo or 'Sin asignar' }}</td>
+          <td class="{{ 'si' if f.existe_silabo else 'no' }}">{{ 'Sí' if f.existe_silabo else 'No' }}</td>
+          <td class="{{ 'si' if f.finalizado else 'no' }}">{{ 'Sí' if f.finalizado else 'No' }}</td>
+          {% endif %}
+          {% if filtros.modo != 'silabos' %}
+          <td class="{{ 'si' if f.existe_plan else 'no' }}">{{ 'Sí' if f.existe_plan else 'No' }}</td>
+          <td>{{ f.ref_plan or '-' }}</td>
+          {% endif %}
+          <td>{{ f.periodo or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="paginacion">
+      {% if pagina > 1 %}<a href="{{ url_pagina(pagina - 1) }}">&larr; Anterior</a>{% endif %}
+      <span>Página {{ pagina }} de {{ total_paginas }}</span>
+      {% if pagina < total_paginas %}<a href="{{ url_pagina(pagina + 1) }}">Siguiente &rarr;</a>{% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const datosGrafico = {{ datos_grafico | safe }};
+  new Chart(document.getElementById('graficoAvance'), {
+    type: 'bar',
+    data: {
+      labels: datosGrafico.labels,
+      datasets: [
+        {% if filtros.modo != 'asignaturas' %}
+        {
+          label: 'Sílabos',
+          data: datosGrafico.silabos,
+          backgroundColor: '#f5a524',
+          borderRadius: 6,
+          maxBarThickness: 34,
+        }{% if filtros.modo == 'general' %},{% endif %}
+        {% endif %}
+        {% if filtros.modo != 'silabos' %}
+        {
+          label: 'Asignaturas',
+          data: datosGrafico.asignaturas,
+          backgroundColor: '#4c6ef5',
+          borderRadius: 6,
+          maxBarThickness: 34,
+        }
+        {% endif %}
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#eef0f7' } },
+        x: { grid: { display: false } },
+      },
+      plugins: { legend: { position: 'bottom' } },
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Cambios de Malla - Gestión Académica{% endblock %}
+
+{% block titulo_pagina %}Cambios de Malla{% endblock %}
+
+{% block content %}
+  <div class="resumen-encabezado">
+    <div>
+      <h2>Comparación de asignaturas</h2>
+      <p>Detecta asignaturas agregadas, retiradas o modificadas entre cargas de la misma unidad.</p>
+    </div>
+  </div>
+
+  <form class="filtros filtros-abiertos" method="GET" action="/asignaturas/cambios">
+    <div>
+      <label>Carga actual</label>
+      <select name="carga_id">
+        {% for c in cargas %}
+        <option value="{{ c.carga_id }}" {{ 'selected' if actual and c.carga_id == actual.carga_id else '' }}>
+          {{ c.fecha_carga.strftime('%d/%m/%Y %H:%M') }} · {{ c.unidad }} · {{ c.nombre_archivo }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <button type="submit">Comparar</button>
+    </div>
+  </form>
+
+  {% if not actual %}
+    <div class="mensaje error">No hay cargas exitosas de asignaturas para comparar.</div>
+  {% elif not anterior %}
+    <div class="mensaje error">No existe una carga anterior de {{ actual.unidad }} para comparar.</div>
+  {% else %}
+    <div class="kpis">
+      <div class="kpi" style="--kpi-color:#22c55e"><p class="valor">{{ agregadas|length }}</p><p class="etiqueta">Agregadas</p><p class="subetiqueta">En la carga actual</p></div>
+      <div class="kpi" style="--kpi-color:#ef4444"><p class="valor">{{ retiradas|length }}</p><p class="etiqueta">Retiradas</p><p class="subetiqueta">Ya no aparecen</p></div>
+      <div class="kpi" style="--kpi-color:#f5a524"><p class="valor">{{ modificadas|length }}</p><p class="etiqueta">Modificadas</p><p class="subetiqueta">Cambios de datos</p></div>
+      <div class="kpi" style="--kpi-color:#4c6ef5"><p class="valor">{{ actual.unidad }}</p><p class="etiqueta">Unidad</p><p class="subetiqueta">{{ anterior.fecha_carga.strftime('%d/%m/%Y') }} -> {{ actual.fecha_carga.strftime('%d/%m/%Y') }}</p></div>
+    </div>
+
+    <div class="fila-listas">
+      <div class="lista-tarjeta verde">
+        <h4>Asignaturas agregadas</h4>
+        {% if agregadas %}<ul>{% for m in agregadas[:12] %}<li>{{ m.cod_materia }} · {{ m.materia }} · {{ m.carrera }}</li>{% endfor %}</ul>{% else %}<p class="vacio">Sin agregadas</p>{% endif %}
+      </div>
+      <div class="lista-tarjeta roja">
+        <h4>Asignaturas retiradas</h4>
+        {% if retiradas %}<ul>{% for m in retiradas[:12] %}<li>{{ m.cod_materia }} · {{ m.materia }} · {{ m.carrera }}</li>{% endfor %}</ul>{% else %}<p class="vacio">Sin retiradas</p>{% endif %}
+      </div>
+      <div class="lista-tarjeta amarilla">
+        <h4>Asignaturas modificadas</h4>
+        {% if modificadas %}<ul>{% for m in modificadas[:12] %}<li>{{ m.cod_materia }} · {{ m.materia }}</li>{% endfor %}</ul>{% else %}<p class="vacio">Sin modificadas</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <h3>Detalle de modificaciones</h3>
+      <div class="tabla-scroll">
+        <table>
+          <tr><th>Carrera / malla</th><th>Código</th><th>Asignatura</th><th>Cambios detectados</th></tr>
+          {% for m in modificadas %}
+          <tr>
+            <td>{{ m.carrera }}</td><td>{{ m.cod_materia }}</td><td>{{ m.materia }}</td><td>{{ m.cambios|join('; ') }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4">No hay modificaciones de datos.</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

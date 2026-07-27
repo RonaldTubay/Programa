@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>{% block title %}Gestión de Sílabos{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/estilo.css') }}">
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="marca">
+      <div class="icono">🎓</div>
+      <div>
+        <div class="titulo">GESTIÓN ACADÉMICA</div>
+        <div class="subtitulo">Sílabos y Asignaturas</div>
+      </div>
+    </div>
+    <nav class="menu">
+      <a href="/dashboard" class="{{ 'activo' if activo == 'inicio' else '' }}"><span class="emoji">🏠</span> Inicio</a>
+      <div class="menu-grupo {{ 'abierto' if activo == 'silabos' else '' }}">
+        <a href="/" class="menu-padre {{ 'activo' if activo == 'silabos' else '' }}"><span class="emoji">📘</span> Sílabos</a>
+        <div class="submenu">
+          <a href="/" class="{{ 'activo-sub' if request.path == '/' else '' }}">Cargar archivos</a>
+          <a href="/silabos/reporte" class="{{ 'activo-sub' if request.path == '/silabos/reporte' else '' }}">Generar reporte</a>
+        </div>
+      </div>
+      <a href="/asignaturas/cambios" class="{{ 'activo' if activo == 'cambios_malla' else '' }}"><span class="emoji">🔀</span> Cambios de Malla</a>
+      <div class="menu-grupo {{ 'abierto' if activo == 'programa_analitico' else '' }}">
+        <a href="/programa-analitico" class="menu-padre {{ 'activo' if activo == 'programa_analitico' else '' }}"><span class="emoji">📋</span> Asignaturas</a>
+        <div class="submenu">
+          <a href="/programa-analitico" class="{{ 'activo-sub' if request.path == '/programa-analitico' else '' }}">Cargar archivos</a>
+          <a href="/asignaturas/reporte" class="{{ 'activo-sub' if request.path == '/asignaturas/reporte' else '' }}">Generar reporte</a>
+        </div>
+      </div>
+      <a href="/historial" class="{{ 'activo' if activo == 'historial' else '' }}"><span class="emoji">🕒</span> Historial</a>
+      <a class="deshabilitado" title="Próximamente"><span class="emoji">⚙️</span> Configuración</a>
+    </nav>
+    <div class="sidebar-pie">
+      <a href="/dashboard" class="cerrar-sesion">Inicio</a>
+    </div>
+  </aside>
+
+  <div class="contenido">
+    <div class="topbar">
+      <h1>{% block titulo_pagina %}{% endblock %}</h1>
+      {% block topbar_centro %}{% endblock %}
+      <div class="topbar-spacer"></div>
+      <a href="/alertas" class="campana {{ 'activo-alerta' if activo == 'alertas' else '' }}" title="Centro de alertas">
+        🔔
+        {% if alertas_resumen and alertas_resumen.total %}
+        <span class="badge">{{ '99+' if alertas_resumen.total > 99 else alertas_resumen.total }}</span>
+        {% endif %}
+      </a>
+      <div class="usuario-box">
+        <div class="avatar">{{ iniciales }}</div>
+        <div>
+          <div class="nombre">{{ session.get('nombre_completo', 'Usuario Local') }}</div>
+          <div class="rol">Gestión Académica</div>
+        </div>
+      </div>
+    </div>
+
+    {% block content %}{% endblock %}
+  </div>
+
+</div>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

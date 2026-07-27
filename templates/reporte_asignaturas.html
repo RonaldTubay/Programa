@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Asignaturas - Gestión Académica{% endblock %}
+
+{% block titulo_pagina %}Reporte de Asignaturas{% endblock %}
+
+{% block content %}
+  <div class="resumen-encabezado">
+    <div>
+      <h2>Control de asignaturas</h2>
+      <p>Consulta planes analíticos, mallas, niveles y materias ofertadas.</p>
+    </div>
+    <div class="acciones-linea">
+      <a class="boton-secundario" href="{{ request.full_path ~ ('&' if '?' in request.full_path else '?') }}descargar=xlsx">Exportar Excel</a>
+      <a class="boton-secundario" href="{{ request.full_path ~ ('&' if '?' in request.full_path else '?') }}descargar=csv">Exportar CSV</a>
+    </div>
+  </div>
+
+  <form class="filtros filtros-abiertos" method="GET" action="/asignaturas/reporte">
+    <div>
+      <label>Período</label>
+      <select name="periodo">
+        <option value="">Todos</option>
+        {% for p in periodos %}<option value="{{ p }}" {{ 'selected' if p == filtros.periodo else '' }}>{{ p }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Tipo de unidad</label>
+      <select name="tipo_unidad" onchange="this.form.unidad_id.value=''; this.form.carrera_id.value=''; this.form.submit()">
+        <option value="">Todas</option>
+        <option value="FACULTAD" {{ 'selected' if filtros.tipo_unidad == 'FACULTAD' else '' }}>Facultades</option>
+        <option value="SEDE_EXTENSION" {{ 'selected' if filtros.tipo_unidad == 'SEDE_EXTENSION' else '' }}>Sedes / extensiones</option>
+        <option value="CAMPUS" {{ 'selected' if filtros.tipo_unidad == 'CAMPUS' else '' }}>Campus</option>
+      </select>
+    </div>
+    <div>
+      <label>Unidad académica</label>
+      <select name="unidad_id" onchange="this.form.carrera_id.value=''; this.form.submit()">
+        <option value="">Todas</option>
+        {% for u in unidades %}<option value="{{ u.unidad_academica_id }}" {{ 'selected' if u.unidad_academica_id|string == filtros.unidad_id else '' }}>{{ u.nombre }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Carrera / malla</label>
+      <select name="carrera_id">
+        <option value="">Todas</option>
+        {% for c in carreras %}<option value="{{ c.carrera_id }}" {{ 'selected' if c.carrera_id|string == filtros.carrera_id else '' }}>{{ c.nombre }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Estado</label>
+      <select name="estado">
+        <option value="">Todos</option>
+        <option value="con_plan" {{ 'selected' if filtros.estado == 'con_plan' else '' }}>Con plan</option>
+        <option value="sin_plan" {{ 'selected' if filtros.estado == 'sin_plan' else '' }}>Sin plan</option>
+        <option value="ofertada" {{ 'selected' if filtros.estado == 'ofertada' else '' }}>Ofertada</option>
+        <option value="no_ofertada" {{ 'selected' if filtros.estado == 'no_ofertada' else '' }}>No ofertada</option>
+      </select>
+    </div>
+    <div>
+      <label>Búsqueda</label>
+      <input type="text" name="buscar" value="{{ filtros.buscar }}" placeholder="Asignatura, código, carrera o plan">
+    </div>
+    <div>
+      <button type="submit">Aplicar</button>
+      <a class="limpiar" href="/asignaturas/reporte">Limpiar</a>
+    </div>
+  </form>
+
+  <div class="kpis">
+    <div class="kpi" style="--kpi-color:#4c6ef5"><p class="valor">{{ kpi.total }}</p><p class="etiqueta">Asignaturas</p><p class="subetiqueta">Registros encontrados</p></div>
+    <div class="kpi" style="--kpi-color:#22c55e"><p class="valor">{{ kpi.con_plan }}</p><p class="etiqueta">Con plan</p><p class="subetiqueta">{{ kpi.porcentaje_plan }}% del total</p></div>
+    <div class="kpi" style="--kpi-color:#ef4444"><p class="valor">{{ kpi.sin_plan }}</p><p class="etiqueta">Sin plan</p><p class="subetiqueta">Pendientes de regularizar</p></div>
+    <div class="kpi" style="--kpi-color:#8b5cf6"><p class="valor">{{ kpi.carreras }}</p><p class="etiqueta">Carreras / mallas</p><p class="subetiqueta">{{ kpi.ofertadas }} ofertadas</p></div>
+  </div>
+
+  <div class="tarjeta">
+    <h3>Detalle del reporte</h3>
+    <p class="desc">{{ filas|length }} asignaturas listas para revisión.</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Unidad</th><th>Carrera / malla</th><th>Nivel</th><th>Código</th><th>Asignatura</th>
+          <th>Régimen</th><th>Plan</th><th>Ref. plan</th><th>Período</th><th>Ofertada</th><th>Observación</th>
+        </tr>
+        {% for f in filas %}
+        <tr>
+          <td>{{ f.unidad }}</td><td>{{ f.carrera }}</td><td>{{ f.nivel or '-' }}</td><td>{{ f.cod_materia }}</td><td>{{ f.materia }}</td>
+          <td>{{ f.regimen_materia or '-' }}</td><td class="{{ 'si' if f.existe_plan else 'no' }}">{{ 'Sí' if f.existe_plan else 'No' }}</td>
+          <td>{{ f.ref_plan or '-' }}</td><td>{{ f.periodo or '-' }}</td><td>{{ 'Sí' if f.ofertada else 'No' }}</td><td>{{ f.observacion or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+{% endblock %}

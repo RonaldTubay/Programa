@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Historial - Gestión Académica{% endblock %}
+
+{% block titulo_pagina %}Historial de Cargas{% endblock %}
+
+{% block content %}
+  <div class="resumen-encabezado">
+    <div>
+      <h2>Trazabilidad</h2>
+      <p>Registro de archivos procesados, errores y cambios aplicados.</p>
+    </div>
+  </div>
+
+  <form class="filtros filtros-abiertos" method="GET" action="/historial">
+    <div>
+      <label>Tipo de reporte</label>
+      <select name="tipo">
+        <option value="">Todos</option>
+        <option value="SILABO" {{ 'selected' if tipo == 'SILABO' else '' }}>Sílabos</option>
+        <option value="PROGRAMA_ANALITICO" {{ 'selected' if tipo == 'PROGRAMA_ANALITICO' else '' }}>Asignaturas</option>
+      </select>
+    </div>
+    <div>
+      <label>Estado</label>
+      <select name="estado">
+        <option value="">Todos</option>
+        <option value="EXITOSO" {{ 'selected' if estado == 'EXITOSO' else '' }}>Exitoso</option>
+        <option value="ERROR" {{ 'selected' if estado == 'ERROR' else '' }}>Error</option>
+        <option value="EN_PROCESO" {{ 'selected' if estado == 'EN_PROCESO' else '' }}>En proceso</option>
+      </select>
+    </div>
+    <div>
+      <button type="submit">Aplicar</button>
+      <a class="limpiar" href="/historial">Limpiar</a>
+    </div>
+  </form>
+
+  <div class="tarjeta">
+    <h3>Últimas cargas</h3>
+    <p class="desc">{{ cargas|length }} registros mostrados.</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Fecha</th><th>Tipo</th><th>Archivo</th><th>Período</th><th>Unidad</th>
+          <th>Nuevos</th><th>Actualiz.</th><th>Sin cambios</th><th>Estado</th><th>Mensaje</th>
+        </tr>
+        {% for c in cargas %}
+        <tr>
+          <td>{{ c.fecha_carga.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ 'Asignaturas' if c.tipo_reporte == 'PROGRAMA_ANALITICO' else 'Sílabos' }}</td>
+          <td>{{ c.nombre_archivo }}</td>
+          <td>{{ c.periodo or '-' }}</td>
+          <td>{{ c.unidad_academica or '-' }}</td>
+          <td>{{ c.registros_creados if c.registros_creados is not none else '-' }}</td>
+          <td>{{ c.registros_actualizados if c.registros_actualizados is not none else '-' }}</td>
+          <td>{{ c.registros_sin_cambio if c.registros_sin_cambio is not none else '-' }}</td>
+          <td class="{{ 'estado-ok' if c.estado == 'EXITOSO' else 'estado-error' }}">{{ c.estado }}</td>
+          <td>{{ c.mensaje_error or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+{% endblock %}

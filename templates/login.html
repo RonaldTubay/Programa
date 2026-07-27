@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Iniciar sesión — Gestión de Sílabos</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/estilo.css') }}">
+</head>
+<body>
+  <div class="login-pantalla">
+    <div class="login-caja">
+      <div class="marca">
+        <div class="icono">🎓</div>
+        <div>
+          <div class="titulo">GESTIÓN ACADÉMICA</div>
+          <div class="subtitulo">Sílabos y Malla Curricular</div>
+        </div>
+      </div>
+      <h1>Iniciar sesión</h1>
+      {% if error %}<div class="mensaje error">{{ error }}</div>{% endif %}
+      <form method="POST">
+        <label>Usuario</label>
+        <input type="text" name="nombre_usuario" required autofocus>
+        <label>Contraseña</label>
+        <input type="password" name="password" required>
+        <button type="submit">Ingresar</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

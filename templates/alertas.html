@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Centro de Alertas - Gestión Académica{% endblock %}
+
+{% block titulo_pagina %}Centro de Alertas{% endblock %}
+
+{% block content %}
+  <div class="resumen-encabezado">
+    <div>
+      <h2>Alertas operativas</h2>
+      <p>Prioriza pendientes, errores de carga y revisiones de malla.</p>
+    </div>
+    <form method="post" action="{{ url_for('marcar_alertas_revisadas') }}">
+      <button class="boton-secundario" type="submit">Marcar como revisado</button>
+    </form>
+  </div>
+
+  <div class="alertas-grid">
+    {% for a in tarjetas %}
+    <a class="alerta-card {{ a.color }}" href="{{ a.url }}">
+      <div>
+        <span class="alerta-total">{{ a.total }}</span>
+        <h3>{{ a.titulo }}</h3>
+        <p>{{ a.descripcion }}</p>
+      </div>
+      <span class="alerta-accion">Revisar</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="tarjeta">
+    <h3>Errores recientes de carga</h3>
+    <p class="desc">Últimos archivos que no pudieron procesarse correctamente.</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Fecha</th><th>Tipo</th><th>Archivo</th><th>Período</th><th>Unidad</th><th>Mensaje</th>
+        </tr>
+        {% for e in errores %}
+        <tr>
+          <td>{{ e.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ 'Asignaturas' if e.tipo == 'PROGRAMA_ANALITICO' else 'Sílabos' }}</td>
+          <td>{{ e.archivo }}</td>
+          <td>{{ e.periodo or '-' }}</td>
+          <td>{{ e.unidad or '-' }}</td>
+          <td>{{ e.mensaje or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">No hay errores recientes.</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+{% endblock %}

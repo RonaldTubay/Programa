@@ -1,0 +1,29 @@
+{% if resultado and resultado.diagnostico %}
+  {% set d = resultado.diagnostico %}
+  <div class="diagnostico {{ 'ok' if d.valido else 'error' }}">
+    <div>
+      <strong>Revision del archivo</strong>
+      <p>{{ d.mensaje }}</p>
+    </div>
+    <div class="diagnostico-grid">
+      <div><span>Esperado</span><strong>{{ d.esperado or '-' }}</strong></div>
+      <div><span>Detectado</span><strong>{{ d.detectado or '-' }}</strong></div>
+      <div><span>Filas</span><strong>{{ d.filas if d.filas is defined else '-' }}</strong></div>
+      <div><span>Columnas</span><strong>{{ d.columnas if d.columnas is defined else '-' }}</strong></div>
+      <div><span>Sin materia</span><strong>{{ d.filas_sin_materia if d.filas_sin_materia is defined else '-' }}</strong></div>
+      <div><span>Duplicados</span><strong>{{ d.duplicados if d.duplicados is defined else '-' }}</strong></div>
+    </div>
+    {% if d.faltantes %}
+      <div class="diagnostico-faltantes">
+        <span>Columnas faltantes:</span>
+        {{ d.faltantes|join(', ') }}
+      </div>
+    {% endif %}
+    {% if d.detalle %}
+      <div class="diagnostico-faltantes">
+        <span>Detalle:</span>
+        {{ d.detalle }}
+      </div>
+    {% endif %}
+  </div>
+{% endif %}

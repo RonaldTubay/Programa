@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Carga de reportes de sílabos{% endblock %}
+
+{% block titulo_pagina %}Carga de Reportes{% endblock %}
+
+{% block content %}
+  <div class="resumen-encabezado">
+    <div>
+      <h2>Sílabos</h2>
+      <p>Sube el archivo exportado del sistema académico (.xls o .xlsx) para actualizar el avance.</p>
+    </div>
+  </div>
+
+  {% if resultado %}
+    {% if resultado.estado == 'EXITOSO' %}
+      <div class="mensaje exito">
+        <strong>Carga exitosa.</strong><br>
+        Período: {{ resultado.periodo }} — Unidad académica: {{ resultado.unidad }}<br>
+        Nuevos: {{ resultado.contadores.creado }} ·
+        Actualizados: {{ resultado.contadores.actualizado }} ·
+        Sin cambios: {{ resultado.contadores.sin_cambios }}
+      </div>
+    {% else %}
+      <div class="mensaje error">
+        <strong>No se pudo cargar el archivo.</strong><br>
+        {{ resultado.mensaje_error }}
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {% include "_diagnostico_archivo.html" %}
+
+  <div class="tarjeta">
+    <h3>Subir archivo</h3>
+    <p class="desc">Formatos aceptados: .xls, .xlsx — máximo 20 MB.</p>
+    <form method="POST" action="/cargar" enctype="multipart/form-data">
+      <div class="zona-carga">
+        <input type="file" name="archivo" id="archivo" accept=".xlsx,.xls" required>
+        <button class="boton-primario" type="submit">Cargar archivo</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="tarjeta">
+    <h3>Cargas recientes</h3>
+    <p class="desc">Últimas {{ cargas|length }} cargas realizadas al sistema.</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Archivo</th><th>Fecha</th><th>Unidad</th><th>Nuevos</th>
+          <th>Actualiz.</th><th>Sin cambios</th><th>Estado</th>
+        </tr>
+        {% for c in cargas %}
+        <tr>
+          <td>{{ c.nombre_archivo }}</td>
+          <td>{{ c.fecha_carga.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ c.unidad_academica or '-' }}</td>
+          <td>{{ c.registros_creados if c.registros_creados is not none else '-' }}</td>
+          <td>{{ c.registros_actualizados if c.registros_actualizados is not none else '-' }}</td>
+          <td>{{ c.registros_sin_cambio if c.registros_sin_cambio is not none else '-' }}</td>
+          <td class="{{ 'estado-ok' if c.estado == 'EXITOSO' else 'estado-error' }}">{{ c.estado }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Reporte de Sílabos - Gestión Académica{% endblock %}
+
+{% block titulo_pagina %}Reporte de Sílabos{% endblock %}
+
+{% block content %}
+  <div class="resumen-encabezado">
+    <div>
+      <h2>Control de sílabos</h2>
+      <p>Filtra, revisa pendientes y exporta el reporte operativo.</p>
+    </div>
+    <div class="acciones-linea">
+      <a class="boton-secundario" href="{{ request.full_path ~ ('&' if '?' in request.full_path else '?') }}descargar=docx">Exportar Word</a>
+      <a class="boton-secundario" href="{{ request.full_path ~ ('&' if '?' in request.full_path else '?') }}descargar=xlsx">Exportar Excel</a>
+      <a class="boton-secundario" href="{{ request.full_path ~ ('&' if '?' in request.full_path else '?') }}descargar=csv">Exportar CSV</a>
+    </div>
+  </div>
+
+  <form class="filtros filtros-abiertos" method="GET" action="/silabos/reporte">
+    <div>
+      <label>Período</label>
+      <select name="periodo">
+        <option value="">Todos</option>
+        {% for p in periodos %}<option value="{{ p }}" {{ 'selected' if p == filtros.periodo else '' }}>{{ p }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Tipo de unidad</label>
+      <select name="tipo_unidad" onchange="this.form.unidad_id.value=''; this.form.carrera_id.value=''; this.form.submit()">
+        <option value="">Todas</option>
+        <option value="FACULTAD" {{ 'selected' if filtros.tipo_unidad == 'FACULTAD' else '' }}>Facultades</option>
+        <option value="SEDE_EXTENSION" {{ 'selected' if filtros.tipo_unidad == 'SEDE_EXTENSION' else '' }}>Sedes / extensiones</option>
+        <option value="CAMPUS" {{ 'selected' if filtros.tipo_unidad == 'CAMPUS' else '' }}>Campus</option>
+      </select>
+    </div>
+    <div>
+      <label>Unidad académica</label>
+      <select name="unidad_id" onchange="this.form.carrera_id.value=''; this.form.submit()">
+        <option value="">Todas</option>
+        {% for u in unidades %}<option value="{{ u.unidad_academica_id }}" {{ 'selected' if u.unidad_academica_id|string == filtros.unidad_id else '' }}>{{ u.nombre }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Carrera / malla</label>
+      <select name="carrera_id">
+        <option value="">Todas</option>
+        {% for c in carreras %}<option value="{{ c.carrera_id }}" {{ 'selected' if c.carrera_id|string == filtros.carrera_id else '' }}>{{ c.nombre }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Estado</label>
+      <select name="estado">
+        <option value="">Todos</option>
+        <option value="sin_silabo" {{ 'selected' if filtros.estado == 'sin_silabo' else '' }}>Sin sílabo</option>
+        <option value="con_silabo" {{ 'selected' if filtros.estado == 'con_silabo' else '' }}>Con sílabo</option>
+        <option value="por_finalizar" {{ 'selected' if filtros.estado == 'por_finalizar' else '' }}>Por finalizar</option>
+        <option value="finalizado" {{ 'selected' if filtros.estado == 'finalizado' else '' }}>Finalizado</option>
+        <option value="sin_profesor" {{ 'selected' if filtros.estado == 'sin_profesor' else '' }}>Sin profesor</option>
+      </select>
+    </div>
+    <div>
+      <label>Búsqueda</label>
+      <input type="text" name="buscar" value="{{ filtros.buscar }}" placeholder="Asignatura, código, carrera o docente">
+    </div>
+    <div>
+      <button type="submit">Aplicar</button>
+      <a class="limpiar" href="/silabos/reporte">Limpiar</a>
+    </div>
+  </form>
+
+  <div class="kpis">
+    <div class="kpi" style="--kpi-color:#4c6ef5"><p class="valor">{{ kpi.total }}</p><p class="etiqueta">Ofertas</p><p class="subetiqueta">Registros encontrados</p></div>
+    <div class="kpi" style="--kpi-color:#f5a524"><p class="valor">{{ kpi.sin_silabo }}</p><p class="etiqueta">Sin sílabo</p><p class="subetiqueta">{{ kpi.porcentaje }}% con sílabo</p></div>
+    <div class="kpi" style="--kpi-color:#eab308"><p class="valor">{{ kpi.por_finalizar }}</p><p class="etiqueta">Por finalizar</p><p class="subetiqueta">Con sílabo sin cerrar</p></div>
+    <div class="kpi" style="--kpi-color:#22c55e"><p class="valor">{{ kpi.finalizados }}</p><p class="etiqueta">Finalizados</p><p class="subetiqueta">{{ kpi.porcentaje_finalizado }}% del total</p></div>
+  </div>
+
+  <div class="tarjeta">
+    <h3>Porcentaje de silabos finalizados por carrera y periodo</h3>
+    <p class="desc">Formato comparativo similar al informe institucional, considerando solo asignaturas ofertadas.</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Unidad Academica</th><th>Carrera</th>
+          {% for p in periodos_comparativo %}<th>{{ p }}</th>{% endfor %}
+        </tr>
+        {% for r in tabla_periodos %}
+        <tr>
+          <td>{{ r.unidad }}</td>
+          <td>{{ r.carrera }}</td>
+          {% for v in r.periodos %}
+          <td>
+            {% if v is not none %}
+            <span class="porcentaje {{ 'alto' if v >= 95 else 'medio' if v >= 85 else 'bajo' }}">{{ '%.2f'|format(v) }}%</span>
+            {% else %}
+            -
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% else %}
+        <tr><td colspan="{{ 2 + (periodos_comparativo|length) }}">No hay datos para consolidar.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h3>Cuadro comparativo de silabos por unidad academica</h3>
+    <p class="desc">Porcentajes calculados solo con asignaturas ofertadas, segun el periodo academico marcado en Asignaturas.</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Facultad / Extension / Sede / Campus</th>
+          <th>Asignaturas ofertadas</th>
+          <th>Silabos creados</th>
+          <th>% creados</th>
+          <th>Silabos finalizados</th>
+          <th>% finalizados</th>
+        </tr>
+        {% for r in resumen_unidades %}
+        <tr>
+          <td>{{ r.unidad }}</td>
+          <td>{{ r.ofertadas }}</td>
+          <td>{{ r.creados }}</td>
+          <td><span class="porcentaje {{ 'alto' if r.porcentaje_creados >= 95 else 'medio' if r.porcentaje_creados >= 85 else 'bajo' }}">{{ '%.2f'|format(r.porcentaje_creados) }}%</span></td>
+          <td>{{ r.finalizados }}</td>
+          <td><span class="porcentaje {{ 'alto' if r.porcentaje_finalizados >= 95 else 'medio' if r.porcentaje_finalizados >= 85 else 'bajo' }}">{{ '%.2f'|format(r.porcentaje_finalizados) }}%</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">No hay datos para consolidar.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h3>Cuadro comparativo por carrera / malla</h3>
+    <p class="desc">Detalle de cumplimiento para identificar carreras con menor porcentaje de finalizacion entre asignaturas ofertadas.</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Unidad</th><th>Carrera / malla</th><th>Ofertadas</th>
+          <th>Creados</th><th>% creados</th><th>Finalizados</th><th>% finalizados</th>
+        </tr>
+        {% for r in resumen_carreras %}
+        <tr>
+          <td>{{ r.unidad }}</td><td>{{ r.carrera }}</td><td>{{ r.ofertadas }}</td>
+          <td>{{ r.creados }}</td>
+          <td><span class="porcentaje {{ 'alto' if r.porcentaje_creados >= 95 else 'medio' if r.porcentaje_creados >= 85 else 'bajo' }}">{{ '%.2f'|format(r.porcentaje_creados) }}%</span></td>
+          <td>{{ r.finalizados }}</td>
+          <td><span class="porcentaje {{ 'alto' if r.porcentaje_finalizados >= 95 else 'medio' if r.porcentaje_finalizados >= 85 else 'bajo' }}">{{ '%.2f'|format(r.porcentaje_finalizados) }}%</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">No hay datos para consolidar.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h3>Detalle del reporte</h3>
+    <p class="desc">{{ filas|length }} registros listos para revisión.</p>
+    <div class="tabla-scroll">
+      <table>
+        <tr>
+          <th>Unidad</th><th>Carrera / malla</th><th>Período</th><th>Código</th><th>Asignatura</th>
+          <th>Paralelo</th><th>Prof. curso</th><th>Prof. sílabo</th><th>Sílabo</th><th>Finalizado</th>
+        </tr>
+        {% for f in filas %}
+        <tr>
+          <td>{{ f.unidad }}</td><td>{{ f.carrera }}</td><td>{{ f.periodo }}</td><td>{{ f.cod_materia }}</td><td>{{ f.materia }}</td>
+          <td>{{ f.paralelo }}</td><td>{{ f.profesor_curso or 'Sin asignar' }}</td><td>{{ f.profesor_silabo or 'Sin asignar' }}</td>
+          <td class="{{ 'si' if f.existe_silabo else 'no' }}">{{ 'Sí' if f.existe_silabo else 'No' }}</td>
+          <td class="{{ 'si' if f.finalizado else 'no' }}">{{ 'Sí' if f.finalizado else 'No' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+{% endblock %}

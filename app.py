@@ -32,9 +32,17 @@ from werkzeug.security import check_password_hash
 # ----------------------------------------------------------------------
 MODO_LOCAL_SIN_LOGIN = True
 
+def _driver_sql_server():
+    drivers = pyodbc.drivers()
+    if "ODBC Driver 18 for SQL Server" in drivers:
+        return "ODBC Driver 18 for SQL Server"
+    if "ODBC Driver 17 for SQL Server" in drivers:
+        return "ODBC Driver 17 for SQL Server"
+    return "ODBC Driver 17 for SQL Server"
+
 CONN_STR = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=localhost;"
+    f"DRIVER={{{_driver_sql_server()}}};"
+    f"SERVER={os.environ.get('GESTION_SILABOS_SQL_SERVER', '.\\SQLEXPRESS')};"
     "DATABASE=Programa_Silabo;"
     "Trusted_Connection=yes;"
     "TrustServerCertificate=yes;"

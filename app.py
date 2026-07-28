@@ -937,7 +937,7 @@ def dashboard():
                    NULL AS profesor_curso, NULL AS profesor_silabo,
                    0 AS existe_silabo, 0 AS finalizado,
                    m.nivel, m.regimen_materia, ISNULL(pa.existe_plan_analitico, 0),
-                   pa.ref_ultimo_plan_analitico, COALESCE(mme.periodo_academico_texto, mme.periodo_carga)
+                   pa.ref_ultimo_plan_analitico, mme.periodo_academico_texto
             {base_from} {where_sql}
             GROUP BY ua.nombre, c.nombre, c.malla, m.materia_id, m.cod_materia, m.nombre,
                      m.nivel, m.regimen_materia, pa.existe_plan_analitico,
@@ -966,7 +966,7 @@ def dashboard():
             "existe_silabo": bool(r[7]), "finalizado": bool(r[8]),
             "nivel": r[9], "regimen_materia": r[10],
             "existe_plan": bool(r[11]), "ref_plan": r[12],
-            "periodo": filtros["periodo"] if filtros["modo"] == "asignaturas" and filtros["periodo"] else r[13],
+            "periodo": r[13],
         }
         for r in cur.fetchall()
     ]
@@ -1448,13 +1448,14 @@ def reporte_silabos():
         ) mme
     """
     where_resumen_sql = _agregar_condicion(where_resumen_sql, "ISNULL(mme.ofertada_este_periodo, 0) = 1")
+    where_detalle_sql = _agregar_condicion(where_sql, "ISNULL(mme.ofertada_este_periodo, 0) = 1")
 
     cur.execute(f"""
         SELECT COUNT(*),
                SUM(CASE WHEN s.existe_silabo = 1 THEN 1 ELSE 0 END),
                SUM(CASE WHEN s.finalizado = 1 THEN 1 ELSE 0 END),
                SUM(CASE WHEN s.existe_silabo = 1 AND (s.finalizado = 0 OR s.finalizado IS NULL) THEN 1 ELSE 0 END)
-        {base_from} {where_sql}
+        {base_from} {where_detalle_sql}
     """, params)
     total, con_silabo, finalizados, por_finalizar = cur.fetchone()
     total = total or 0
@@ -1589,7 +1590,7 @@ def reporte_silabos():
                p.nombre, m.cod_materia, m.nombre, oa.paralelo,
                dc.nombre_completo, ds.nombre_completo,
                ISNULL(s.existe_silabo, 0), ISNULL(s.finalizado, 0)
-        {base_from} {where_sql}
+        {base_from} {where_detalle_sql}
         ORDER BY ua.nombre, c.nombre, m.nombre, oa.paralelo
     """, params)
     filas_raw = cur.fetchall()
@@ -1786,7 +1787,7 @@ def reporte_asignaturas():
                m.nivel, m.cod_materia, m.nombre, m.regimen_materia,
                ISNULL(pa.existe_plan_analitico, 0), pa.ref_ultimo_plan_analitico,
                pa.observacion,
-               COALESCE(mme.periodo_academico_texto, mme.periodo_carga),
+               mme.periodo_academico_texto,
                ISNULL(mme.ofertada_este_periodo, 0)
         {base_from} {where_sql}
         ORDER BY ua.nombre, c.nombre, m.nivel, m.nombre
@@ -1802,7 +1803,7 @@ def reporte_asignaturas():
         for r in filas_raw
     ]
 
-    encabezados = ["Unidad", "Carrera", "Nivel", "Codigo", "Asignatura", "Regimen", "Existe plan", "Ref plan", "Observacion", "Periodo", "Ofertada"]
+    encabezados = ["Unidad", "Carrera", "Nivel", "Codigo", "Asignatura", "Regimen", "Existe plan", "Ref plan", "Observacion", "Periodo academico", "Ofertada"]
     filas_export = [[f["unidad"], f["carrera"], f["nivel"], f["cod_materia"], f["materia"], f["regimen_materia"], "Si" if f["existe_plan"] else "No", f["ref_plan"], f["observacion"], f["periodo"], "Si" if f["ofertada"] else "No"] for f in filas]
     if descargar == "csv":
         conn.close()
